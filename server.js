@@ -12,6 +12,10 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", "
 http
   .createServer((req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    if (url.pathname === "/healthz") {
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      return res.end("ok");
+    }
     const file = path.join(PUBLIC, url.pathname === "/" ? "index.html" : url.pathname);
     if (!file.startsWith(PUBLIC) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
       res.writeHead(404);
@@ -23,4 +27,4 @@ http
     if (file.endsWith(".html") && !/^\s*<!doctype/i.test(body)) body = Buffer.concat([Buffer.from("<!doctype html>\n"), body]);
     res.end(body);
   })
-  .listen(PORT, () => console.log(`Zipline Content Dashboard on http://localhost:${PORT}`));
+  .listen(PORT, "0.0.0.0", () => console.log(`Zipline Content Dashboard on http://localhost:${PORT}`));
