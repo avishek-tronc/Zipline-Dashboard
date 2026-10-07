@@ -1,0 +1,10 @@
+# Render Blueprint: deploys the dashboard as a free Node web service.
+services:
+  - type: web
+    name: zipline-content-dashboard
+    runtime: node
+    plan: free
+    buildCommand: "true"
+    startCommand: node server.js
+    healthCheckPath: /healthz
+    autoDeploy: true
