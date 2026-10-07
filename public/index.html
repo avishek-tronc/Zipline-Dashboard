@@ -1,0 +1,591 @@
+<title>Zipline Content Dashboard</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: masthead > KPI strip > 2x2 charts > filter bar > wide scrolling package table. Ops console, teal accent. */
+:root {
+  --bg: #f4f5f3; --surface: #ffffff; --surface-2: #f8f9f7; --ink: #151918; --ink-2: #4c5350; --muted: #767d79;
+  --line: #e1e4df; --line-strong: #cdd2cc; --accent: #0e5c55; --accent-ink: #ffffff;
+  --good: #0a7d0a; --good-soft: #e5f3e3; --warn: #8a5a00; --warn-soft: #fbf0d6; --crit: #b42f2f; --crit-soft: #fbe7e6;
+  --embargo: #4a3aa7; --embargo-soft: #ecebf8;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s7: #4a3aa7;
+  --grid: #eceee9; --shadow: 0 1px 2px rgba(20,30,25,.06), 0 8px 24px rgba(20,30,25,.08);
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111413; --surface: #191d1c; --surface-2: #1f2422; --ink: #edf0ee; --ink-2: #b6bdb9; --muted: #8b928e;
+  --line: #2a302e; --line-strong: #3a413e; --accent: #5cc0b3; --accent-ink: #0b1a18;
+  --good: #5cc95c; --good-soft: #17301a; --warn: #f0b84a; --warn-soft: #362b14; --crit: #f07a7a; --crit-soft: #3a1c1c;
+  --embargo: #a69cf0; --embargo-soft: #26223f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s7: #9085e9;
+  --grid: #252a28; --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111413; --surface: #191d1c; --surface-2: #1f2422; --ink: #edf0ee; --ink-2: #b6bdb9; --muted: #8b928e;
+  --line: #2a302e; --line-strong: #3a413e; --accent: #5cc0b3; --accent-ink: #0b1a18;
+  --good: #5cc95c; --good-soft: #17301a; --warn: #f0b84a; --warn-soft: #362b14; --crit: #f07a7a; --crit-soft: #3a1c1c;
+  --embargo: #a69cf0; --embargo-soft: #26223f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s7: #9085e9;
+  --grid: #252a28; --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font-sans); }
+.wrap { max-width: 1440px; margin: 0 auto; padding-inline: 20px; padding-block: 20px 48px; display: grid; gap: 20px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; }
+.muted { color: var(--muted); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.mast { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.mast h1 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+.mast .sub { color: var(--ink-2); margin-top: 2px; }
+.sample { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+.mast-actions { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 14px 18px; display: grid; gap: 2px; position: relative; overflow: hidden; }
+.kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--k, var(--line-strong)); }
+.kpi .lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.kpi .val { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.kpi .note { font-size: 12px; color: var(--muted); }
+
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 12px; min-width: 0; }
+.card h3 { font-size: 14px; font-weight: 600; }
+.card .cap { font-size: 12px; color: var(--muted); margin: 2px 0 8px; }
+.chartbox { position: relative; height: 220px; }
+
+.filters { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.f { display: grid; gap: 4px; min-width: 0; }
+.f label, .f .lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.f select, .f input { height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); }
+.f.journal select { width: min(340px, 80vw); }
+.daterange { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn { height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--surface-2); border-color: var(--ink-2); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.1); background: var(--accent); border-color: var(--accent); }
+.btn.danger { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 45%, transparent); }
+.btn.danger:hover:not(:disabled) { background: var(--crit-soft); border-color: var(--crit); }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 13px; }
+
+.tablecard { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.tablehead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.tablehead h2 { font-size: 15px; font-weight: 600; }
+.tablewrap { overflow: auto; max-height: 72vh; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: middle; }
+thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+th .arr { font-size: 10px; margin-left: 3px; color: var(--accent); }
+tbody tr:hover td { background: var(--surface-2); }
+td.num { text-align: right; color: var(--muted); }
+td.jt { white-space: normal; min-width: 220px; max-width: 280px; }
+td.jt .code { display: block; color: var(--muted); font-family: var(--font-mono); font-size: 11.5px; }
+td.pn { font-family: var(--font-mono); font-size: 12.5px; }
+.yn { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
+.yn.y { color: var(--good); background: var(--good-soft); }
+.yn.n { color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); }
+.yn.bad { color: var(--crit); background: var(--crit-soft); }
+.chip { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+.chip.asap { color: var(--s1); background: color-mix(in srgb, var(--s1) 13%, transparent); }
+.chip.issue { color: var(--ink-2); background: var(--surface-2); border: 1px solid var(--line); }
+.emb { display: inline-grid; gap: 1px; }
+.emb .tag { color: var(--embargo); background: var(--embargo-soft); font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 4px; justify-self: start; }
+.emb .past { color: var(--muted); font-size: 11px; }
+.empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+.pager { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.pager .btns { display: flex; gap: 6px; }
+
+.overlay { position: fixed; inset: 0; background: rgba(10,15,13,.5); display: grid; place-items: center; padding: 16px; z-index: 50; }
+.modal { background: var(--surface); color: var(--ink); border-radius: 10px; box-shadow: var(--shadow); width: min(920px, 100%); max-height: 88vh; display: flex; flex-direction: column; border: 1px solid var(--line); }
+.modal.small { width: min(460px, 100%); }
+.modal header { display: flex; justify-content: space-between; align-items: start; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.modal header h2 { font-size: 17px; overflow-wrap: anywhere; }
+.modal .body { padding: 16px 20px; overflow: auto; display: grid; gap: 16px; }
+.modal footer { display: flex; flex-wrap: wrap; justify-content: end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--line); }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 20px; margin: 0; }
+.meta div { display: grid; gap: 2px; min-width: 0; }
+.meta dt { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.meta dd { margin: 0; overflow-wrap: anywhere; }
+.arts { border: 1px solid var(--line); border-radius: 8px; overflow: auto; }
+.arts td.t { white-space: normal; min-width: 260px; }
+.arts td { font-size: 13px; }
+.close { border: 0; background: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 6px; }
+
+.toasts { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; z-index: 60; }
+.toast { background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; box-shadow: var(--shadow); font-size: 13px; max-width: 360px; }
+@media (prefers-reduced-motion: no-preference) { .toast { animation: rise .2s ease-out; } @keyframes rise { from { transform: translateY(6px); opacity: .4 } } }
+@media (max-width: 600px) { .wrap { padding-inline: 16px; } .kpi .val { font-size: 26px; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>Zipline Content Dashboard <span class="sample">Sample data</span></h1>
+      <div class="sub">Auto publish, embargo and load status for ACS journal packages</div>
+    </div>
+    <div class="mast-actions"><span id="asof"></span><button class="btn sm" id="resetData" type="button">Reset sample data</button></div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Today"></section>
+
+  <section class="charts" aria-label="Charts">
+    <div class="card"><h3>Published today, by hour</h3><div class="cap">Packages that went live today, auto vs manual</div><div class="chartbox"><canvas id="cHour" aria-label="Packages published today by hour"></canvas></div></div>
+    <div class="card"><h3>Uploads, last 14 days</h3><div class="cap">Packages by upload day and current publish state</div><div class="chartbox"><canvas id="cDays" aria-label="Uploads in the last 14 days"></canvas></div></div>
+    <div class="card"><h3>By uploader</h3><div class="cap">All packages in view, by current publish state</div><div class="chartbox"><canvas id="cUser" aria-label="Packages by uploader"></canvas></div></div>
+    <div class="card"><h3>Embargo releases, next 7 days</h3><div class="cap">Unpublished packages whose embargo lifts each day</div><div class="chartbox"><canvas id="cEmb" aria-label="Embargo releases in the next 7 days"></canvas></div></div>
+  </section>
+
+  <section class="filters" aria-label="Filters">
+    <div class="f journal"><label for="fJournal">Journal code</label><select id="fJournal"></select></div>
+    <div class="f"><label for="fType">ASAP / Issue</label><select id="fType"><option value="">All</option><option>ASAP</option><option>Issue</option></select></div>
+    <div class="f"><label for="fUser">Uploaded by user</label><select id="fUser"><option value="">All users</option></select></div>
+    <div class="f"><label for="fPub">Published / Unpublished</label><select id="fPub"><option value="">All</option><option value="Y">Published</option><option value="N">Unpublished</option></select></div>
+    <div class="f"><span class="lbl">Upload date range</span><div class="daterange"><input type="date" id="fFrom" aria-label="Uploaded from"><span class="muted">to</span><input type="date" id="fTo" aria-label="Uploaded to"></div></div>
+    <button class="btn" id="clearFilters" type="button">Clear filters</button>
+  </section>
+
+  <section class="tablecard">
+    <div class="tablehead"><h2>Packages</h2><span class="muted" id="count"></span></div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pager"><span id="pageInfo"></span><div class="btns"><button class="btn sm" id="prev" type="button">Previous</button><button class="btn sm" id="next" type="button">Next</button></div></div>
+  </section>
+</div>
+<div id="modalRoot"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+"use strict";
+// ---------------------------------------------------------------------------
+// Reference data
+// ---------------------------------------------------------------------------
+const JOURNALS = [
+  ["jacsat","Journal of the American Chemical Society","jacs"],["achre4","Accounts of Chemical Research","accounts"],
+  ["chreay","Chemical Reviews","chemrev"],["acscii","ACS Central Science","acscentsci"],["jacsau","JACS Au","jacsau"],
+  ["jmcmar","Journal of Medicinal Chemistry","jmedchem"],["joceah","The Journal of Organic Chemistry","joc"],
+  ["orlef7","Organic Letters","orglett"],["oprdfk","Organic Process Research & Development","oprd"],
+  ["orgnd7","Organometallics","organomet"],["inocaj","Inorganic Chemistry","inorgchem"],["ancham","Analytical Chemistry","analchem"],
+  ["esthag","Environmental Science & Technology","est"],["estlcu","Environmental Science & Technology Letters","estlett"],
+  ["jpcafh","The Journal of Physical Chemistry A","jpca"],["jpcbfk","The Journal of Physical Chemistry B","jpcb"],
+  ["jpccck","The Journal of Physical Chemistry C","jpcc"],["jpclcd","The Journal of Physical Chemistry Letters","jpclett"],
+  ["jctcce","Journal of Chemical Theory and Computation","jctc"],["jcisd8","Journal of Chemical Information and Modeling","jcim"],
+  ["nalefd","Nano Letters","nanolett"],["ancac3","ACS Nano","acsnano"],["aamick","ACS Applied Materials & Interfaces","acsami"],
+  ["aaembp","ACS Applied Energy Materials","acsaem"],["aanmf6","ACS Applied Nano Materials","acsanm"],
+  ["aabmcb","ACS Applied Bio Materials","acsabm"],["apcach","ACS Applied Polymer Materials","acsapm"],
+  ["cmatex","Chemistry of Materials","chemmater"],["mamobx","Macromolecules","macromol"],["amlccd","ACS Macro Letters","acsmacrolett"],
+  ["bomaf6","Biomacromolecules","biomac"],["langd5","Langmuir","langmuir"],["cgdefu","Crystal Growth & Design","cgd"],
+  ["bichaw","Biochemistry","biochem"],["bcches","Bioconjugate Chemistry","bioconjchem"],["acbcct","ACS Chemical Biology","acschembio"],
+  ["acncdm","ACS Chemical Neuroscience","acschemneuro"],["amclct","ACS Medicinal Chemistry Letters","acsmedchemlett"],
+  ["aidcbc","ACS Infectious Diseases","acsinfecdis"],["aptsfn","ACS Pharmacology & Translational Science","acsptsci"],
+  ["asbcd6","ACS Synthetic Biology","acssynbio"],["abseba","ACS Biomaterials Science & Engineering","acsbiomaterials"],
+  ["mpohbp","Molecular Pharmaceutics","molpharmaceut"],["crtoec","Chemical Research in Toxicology","chemrestox"],
+  ["jnprdf","Journal of Natural Products","jnatprod"],["jprobs","Journal of Proteome Research","jproteome"],
+  ["jafcau","Journal of Agricultural and Food Chemistry","jafc"],["accacs","ACS Catalysis","acscatal"],
+  ["aelccp","ACS Energy Letters","acsenergylett"],["ascefj","ACS Sustainable Chemistry & Engineering","acssuschemeng"],
+  ["apchd5","ACS Photonics","acsphotonics"],["ascecg","ACS Sensors","acssensors"],["aesccq","ACS Earth and Space Chemistry","acsearthspacechem"],
+  ["iecred","Industrial & Engineering Chemistry Research","iecr"],["enfuem","Energy & Fuels","energyfuels"],
+  ["jceaax","Journal of Chemical & Engineering Data","jced"],["jceda8","Journal of Chemical Education","jchemed"],
+  ["acsodf","ACS Omega","acsomega"],
+].map(([code, title, slug]) => ({ code, title, slug })).sort((a, b) => a.title.localeCompare(b.title));
+const USERS = ["acs_pet", "acs_striave", "acs_tnq"];
+const DAY = 864e5, HOUR = 36e5, MIN = 6e4;
+
+// ---------------------------------------------------------------------------
+// Sample data generator (deterministic per calendar day)
+// ---------------------------------------------------------------------------
+function mulberry32(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const sod = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const ymd = (t) => { const d = new Date(t); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`; };
+
+function generate(now) {
+  const today = sod(now), rnd = mulberry32(Number(ymd(now)));
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const int = (lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
+  const hex = (n) => Array.from({ length: n }, () => "0123456789abcdef"[int(0, 15)]).join("");
+  const ADJ = ["Enantioselective","Photocatalytic","Electrochemical","Scalable","Site-Selective","Ligand-Enabled","Machine-Learning-Guided","High-Throughput","Operando","Single-Atom","Bioinspired","Stereodivergent"];
+  const NOUN = ["C–H Functionalization","Perovskite Thin Films","Metal–Organic Frameworks","Covalent Organic Frameworks","Lithium–Sulfur Cathodes","Peptide Macrocycles","Kinase Inhibitors","Microplastic Degradation","Quantum Dots","Hydrogel Scaffolds","CO2 Electroreduction","Nitrogen Fixation","PFAS Remediation","Protein–Ligand Binding"];
+  const PHR = ["via Cooperative Catalysis","for Selective Sensing","with Enhanced Stability","in Aqueous Media","at Ambient Temperature","Revealed by Cryo-EM","for Targeted Drug Delivery","under Visible Light","from Biomass Feedstocks"];
+  const NAMES = ["Zhang","Patel","Müller","García","Okafor","Tanaka","Nguyen","Rossi","Kim","Silva","Kowalski","Haddad","Johnson","Sen","Ivanova","Chen","Dubois","Mensah"];
+  const initials = () => String.fromCharCode(65 + int(0, 25)) + ". ";
+  const busyCodes = ["jacsat","jmcmar","joceah","orlef7","aamick","ancac3","acsodf","nalefd","inocaj","esthag","jafcau","accacs"];
+  const busy = JOURNALS.filter((j) => busyCodes.includes(j.code));
+  const seq = {}, issueNo = {};
+  const out = [];
+  for (let i = 0; i < 300; i++) {
+    const daysAgo = i < 34 ? 0 : int(1, 29);
+    const dayStart = today - daysAgo * DAY;
+    const uploadedAt = daysAgo === 0
+      ? dayStart + Math.floor(rnd() * Math.max(now - dayStart - 10 * MIN, MIN))
+      : dayStart + int(6 * 60, 21 * 60) * MIN;
+    const j = rnd() < 0.6 ? pick(busy) : pick(JOURNALS);
+    const type = rnd() < 0.72 ? "ASAP" : "Issue";
+    const user = pick(USERS);
+    const vol = 140 + (j.code.charCodeAt(1) % 9);
+    if (type === "Issue") issueNo[j.code] = (issueNo[j.code] || int(28, 36)) + 1;
+    const iss = issueNo[j.code];
+    const key = `${j.code}_${ymd(uploadedAt)}`; seq[key] = (seq[key] || 0) + 1;
+    const packageName = type === "ASAP" ? `${j.code}_ASAP_${ymd(uploadedAt)}_${String(seq[key]).padStart(2, "0")}` : `${j.code}_v${vol}i${iss}`;
+    const autoPublish = rnd() < 0.55, loaded = rnd() < 0.93;
+    let embargoDate = null;
+    if (rnd() < 0.2) { const e = new Date(uploadedAt + int(2, 9 * 24) * HOUR); e.setMinutes(0, 0, 0); embargoDate = e.getTime(); }
+    let published = false, publishedAt = null, publishedBy = null;
+    if (loaded) {
+      const release = Math.max(uploadedAt + int(5, 40) * MIN, embargoDate || 0);
+      if (autoPublish) { if (release <= now) { published = true; publishedAt = release; publishedBy = "Auto publish"; } }
+      else if (!(embargoDate > now) && rnd() < (daysAgo === 0 ? 0.3 : 0.85)) {
+        published = true; publishedAt = Math.max(uploadedAt, Math.min(now - MIN, release + int(10, 300) * MIN)); publishedBy = user;
+      }
+    }
+    const nArt = type === "ASAP" ? int(1, 6) : int(12, 28);
+    const doiBase = j.slug.startsWith("acs") || j.slug.startsWith("jacs") ? j.slug : "acs." + j.slug;
+    const articles = Array.from({ length: nArt }, () => ({
+      doi: `10.1021/${doiBase}.6c${String(int(1000, 9999)).padStart(5, "0")}`,
+      title: `${pick(ADJ)} ${pick(NOUN)} ${pick(PHR)}`,
+      authors: Array.from({ length: int(1, 3) }, () => initials() + pick(NAMES)).join(", ") + (rnd() < 0.6 ? ", et al." : ""),
+      pages: type === "Issue" ? `${int(1000, 9800)}–${int(10, 99)}` : "ASAP",
+    }));
+    out.push({
+      packageId: `PKG${ymd(uploadedAt).slice(2)}${String(i + 1).padStart(4, "0")}`,
+      journalCode: j.code, journalTitle: j.title, packageName, type, volume: vol, issue: type === "Issue" ? iss : null,
+      submissionKey: `${hex(8)}-${hex(4)}-${hex(4)}-${hex(4)}`.toUpperCase(),
+      uploadedBy: user, uploadedAt, autoPublish, published, publishedAt, publishedBy, loaded, embargoDate, articles,
+    });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Mock API. Replace these functions with fetch() calls to the server proxy
+// (which talks to Zipline) once the real API is known.
+// ---------------------------------------------------------------------------
+const STORE_KEY = "zcd-actions-" + ymd(Date.now());
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const store = { packages: [], actions: {} };
+function loadActions() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch { return {}; } }
+function saveActions() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store.actions)); } catch {} }
+const api = {
+  async listPackages() {
+    await wait(120);
+    store.packages = generate(Date.now());
+    store.actions = loadActions();
+    for (const p of store.packages) Object.assign(p, store.actions[p.packageId] || {});
+    return store.packages;
+  },
+  async publishPackage(id, user) {
+    await wait(700);
+    const p = store.packages.find((x) => x.packageId === id);
+    if (!p.loaded) throw new Error("the package is not loaded into Zipline yet");
+    if (p.embargoDate > Date.now()) throw new Error("the package is under embargo");
+    const change = { published: true, publishedAt: Date.now(), publishedBy: user };
+    Object.assign(p, change); store.actions[id] = change; saveActions();
+    return p;
+  },
+  async unpublishPackage(id) {
+    await wait(700);
+    const p = store.packages.find((x) => x.packageId === id);
+    const change = { published: false, publishedAt: null, publishedBy: null };
+    Object.assign(p, change); store.actions[id] = change; saveActions();
+    return p;
+  },
+  async resetSample() { store.actions = {}; try { localStorage.removeItem(STORE_KEY); } catch {} },
+};
+const CURRENT_USER = "dashboard_user";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const fmtDT = (t) => t ? new Date(t).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+const fmtD = (t) => new Date(t).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const YN = (v, bad) => v ? `<span class="yn y">✓ Y</span>` : `<span class="yn ${bad ? "bad" : "n"}">${bad ? "! " : ""}N</span>`;
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; $("toasts").append(t); setTimeout(() => t.remove(), 4000); }
+const dateInputToTs = (v, end) => { if (!v) return null; const [y, m, d] = v.split("-").map(Number); const t = new Date(y, m - 1, d).getTime(); return end ? t + DAY - 1 : t; };
+function publishBlock(p, now = Date.now()) {
+  if (p.published) return "Already published";
+  if (!p.loaded) return "Not loaded into Zipline";
+  if (p.embargoDate > now) return "Under embargo until " + fmtDT(p.embargoDate);
+  return "";
+}
+
+// ---------------------------------------------------------------------------
+// State, filtering, sorting
+// ---------------------------------------------------------------------------
+const state = { all: [], sort: { key: "uploadedAt", dir: -1 }, page: 0, pageSize: 20 };
+const COLS = [
+  { key: "_sl", label: "Sl. No." },
+  { key: "journalTitle", label: "Journal Title", sort: true },
+  { key: "packageId", label: "Package ID", sort: true },
+  { key: "packageName", label: "Package Name", sort: true },
+  { key: "type", label: "ASAP/Issue", sort: true },
+  { key: "submissionKey", label: "SubmissionKey" },
+  { key: "uploadedBy", label: "Uploaded By User", sort: true },
+  { key: "uploadedAt", label: "Uploaded Date", sort: true },
+  { key: "autoPublish", label: "Auto Publish Flag", sort: true },
+  { key: "published", label: "Publish Status", sort: true },
+  { key: "loaded", label: "Load Status", sort: true },
+  { key: "_preview", label: "Preview" },
+  { key: "_publish", label: "Publish" },
+  { key: "embargoDate", label: "Embargo Date", sort: true },
+  { key: "_unpublish", label: "Unpublish" },
+];
+const FILTER_IDS = ["fJournal", "fType", "fUser", "fPub", "fFrom", "fTo"];
+function filters() {
+  return { journal: $("fJournal").value, type: $("fType").value, user: $("fUser").value, pub: $("fPub").value,
+           from: dateInputToTs($("fFrom").value), to: dateInputToTs($("fTo").value, true) };
+}
+// Journal, ASAP/Issue and user filters drive the tiles and charts; the table also applies publish status and date range.
+function dimFiltered(f = filters()) {
+  return state.all.filter((p) => (!f.journal || p.journalCode === f.journal) && (!f.type || p.type === f.type) && (!f.user || p.uploadedBy === f.user));
+}
+function tableRows() {
+  const f = filters();
+  const rows = dimFiltered(f).filter((p) => (!f.pub || (f.pub === "Y") === p.published) && (f.from == null || p.uploadedAt >= f.from) && (f.to == null || p.uploadedAt <= f.to));
+  const { key, dir } = state.sort;
+  const val = (p) => { const v = p[key]; return v == null ? (dir > 0 ? Infinity : -Infinity) : typeof v === "boolean" ? +v : v; };
+  return rows.sort((a, b) => { const x = val(a), y = val(b); return (typeof x === "string" && typeof y === "string" ? x.localeCompare(y) : x - y) * dir; });
+}
+
+// ---------------------------------------------------------------------------
+// KPI tiles
+// ---------------------------------------------------------------------------
+function renderKPIs(rows) {
+  const now = Date.now(), today = sod(now), eod = today + DAY;
+  const isToday = (t) => t != null && t >= today && t < eod;
+  const autoToday = rows.filter((p) => p.published && p.publishedBy === "Auto publish" && isToday(p.publishedAt)).length;
+  const manualToday = rows.filter((p) => p.published && p.publishedBy !== "Auto publish" && isToday(p.publishedAt)).length;
+  const pending = rows.filter((p) => p.loaded && !p.published && (isToday(p.uploadedAt) || isToday(p.embargoDate)) && !(p.embargoDate >= eod));
+  const pendingAuto = pending.filter((p) => p.autoPublish).length;
+  const embargoed = rows.filter((p) => !p.published && p.embargoDate > now);
+  const liftToday = embargoed.filter((p) => p.embargoDate < eod).length;
+  const upToday = rows.filter((p) => isToday(p.uploadedAt));
+  const loadFail = upToday.filter((p) => !p.loaded).length;
+  const tiles = [
+    ["Auto published today", autoToday, `${manualToday} more published manually`, "var(--s1)"],
+    ["Pending publish today", pending.length, `${pendingAuto} waiting on auto publish`, "var(--s2)"],
+    ["Under embargo", embargoed.length, `${liftToday} lift later today`, "var(--embargo)"],
+    ["Uploaded today", upToday.length, `${upToday.reduce((n, p) => n + p.articles.length, 0)} articles`, "var(--line-strong)"],
+    ["Load failures today", loadFail, loadFail ? "Reload before publishing" : "All packages loaded", loadFail ? "var(--crit)" : "var(--good)"],
+  ];
+  $("kpis").innerHTML = tiles.map(([l, v, n, c]) => `<div class="kpi" style="--k:${c}"><span class="lbl">${l}</span><span class="val">${v}</span><span class="note">${n}</span></div>`).join("");
+}
+
+// ---------------------------------------------------------------------------
+// Charts (Chart.js)
+// ---------------------------------------------------------------------------
+const charts = {};
+const CHART_FONT = "'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif";
+function baseOpts(stacked, horizontal) {
+  const ink2 = css("--ink-2"), grid = css("--grid");
+  const axis = (isValue) => ({ stacked, beginAtZero: true, grid: { color: isValue ? grid : "transparent", drawTicks: false }, border: { display: false },
+    ticks: { color: ink2, font: { family: CHART_FONT, size: 11 }, padding: 6, precision: 0, ...(isValue ? { maxTicksLimit: 5 } : { autoSkip: true, maxRotation: 0 }) } });
+  return {
+    responsive: true, maintainAspectRatio: false, animation: { duration: 250 }, indexAxis: horizontal ? "y" : "x",
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { position: "top", align: "end", labels: { color: ink2, boxWidth: 10, boxHeight: 10, useBorderRadius: true, borderRadius: 2, font: { family: CHART_FONT, size: 12 } } },
+      tooltip: { backgroundColor: css("--ink"), titleColor: css("--bg"), bodyColor: css("--bg"), padding: 10, cornerRadius: 6, boxPadding: 4,
+        titleFont: { family: CHART_FONT, weight: "600" }, bodyFont: { family: CHART_FONT } },
+    },
+    scales: { x: axis(!horizontal), y: axis(!!horizontal) },
+  };
+}
+function ds(label, data, color, horizontal) {
+  return { label, data, backgroundColor: color, borderColor: css("--surface"), borderRadius: 3, borderSkipped: "start", maxBarThickness: 28,
+    borderWidth: horizontal ? { right: 2 } : { top: 2 } };
+}
+function draw(id, config) { charts[id]?.destroy(); charts[id] = new Chart($(id), config); }
+
+function renderCharts(rows) {
+  if (!window.Chart) return;
+  const now = Date.now(), today = sod(now);
+  const S1 = css("--s1"), S2 = css("--s2"), S3 = css("--s3"), S7 = css("--s7");
+  const isAuto = (p) => p.publishedBy === "Auto publish";
+
+  // Published today by hour: first bar collects everything before 06:00.
+  const lastH = Math.max(18, new Date(now).getHours());
+  const hours = Array.from({ length: lastH - 5 }, (_, i) => i + 6);
+  const hourOf = (p) => Math.max(6, new Date(p.publishedAt).getHours());
+  const byHour = (fn) => hours.map((h) => rows.filter((p) => p.published && fn(p) && p.publishedAt >= today && hourOf(p) === h).length);
+  draw("cHour", { type: "bar", data: { labels: hours.map((h) => (h === 6 ? "≤06" : String(h).padStart(2, "0")) + ":00"),
+    datasets: [ds("Auto publish", byHour(isAuto), S1), ds("Manual", byHour((p) => !isAuto(p)), S3)] }, options: baseOpts(true) });
+
+  // Uploads in the last 14 days, by current publish state.
+  const days = Array.from({ length: 14 }, (_, i) => today - (13 - i) * DAY);
+  const inDay = (p, d) => p.uploadedAt >= d && p.uploadedAt < d + DAY;
+  draw("cDays", { type: "bar", data: { labels: days.map((d) => d === today ? "Today" : fmtD(d)),
+    datasets: [
+      ds("Auto published", days.map((d) => rows.filter((p) => inDay(p, d) && p.published && isAuto(p)).length), S1),
+      ds("Manually published", days.map((d) => rows.filter((p) => inDay(p, d) && p.published && !isAuto(p)).length), S3),
+      ds("Unpublished", days.map((d) => rows.filter((p) => inDay(p, d) && !p.published).length), S2),
+    ] }, options: baseOpts(true) });
+
+  // By uploader.
+  draw("cUser", { type: "bar", data: { labels: USERS,
+    datasets: [
+      ds("Auto published", USERS.map((u) => rows.filter((p) => p.uploadedBy === u && p.published && isAuto(p)).length), S1, true),
+      ds("Manually published", USERS.map((u) => rows.filter((p) => p.uploadedBy === u && p.published && !isAuto(p)).length), S3, true),
+      ds("Unpublished", USERS.map((u) => rows.filter((p) => p.uploadedBy === u && !p.published).length), S2, true),
+    ] }, options: baseOpts(true, true) });
+
+  // Embargo releases over the next 7 days.
+  const next = Array.from({ length: 7 }, (_, i) => today + i * DAY);
+  const embOpts = baseOpts(false); embOpts.plugins.legend.display = false;
+  draw("cEmb", { type: "bar", data: { labels: next.map((d, i) => i === 0 ? "Today" : new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "2-digit" })),
+    datasets: [{ ...ds("Embargo lifts", next.map((d) => rows.filter((p) => !p.published && p.embargoDate > now && p.embargoDate >= d && p.embargoDate < d + DAY).length), S7), borderWidth: 0 }] }, options: embOpts });
+}
+
+// ---------------------------------------------------------------------------
+// Table
+// ---------------------------------------------------------------------------
+function renderHead() {
+  $("thead").innerHTML = COLS.map((c) => {
+    const on = state.sort.key === c.key;
+    return `<th${c.sort ? ` class="sortable" data-key="${c.key}" aria-sort="${on ? (state.sort.dir > 0 ? "ascending" : "descending") : "none"}"` : ""}>${c.label}${on ? `<span class="arr">${state.sort.dir > 0 ? "▲" : "▼"}</span>` : ""}</th>`;
+  }).join("");
+}
+function renderTable() {
+  const rows = tableRows(), now = Date.now();
+  const pages = Math.max(1, Math.ceil(rows.length / state.pageSize));
+  state.page = Math.max(0, Math.min(state.page, pages - 1));
+  const start = state.page * state.pageSize, slice = rows.slice(start, start + state.pageSize);
+  $("count").textContent = `${rows.length} of ${state.all.length} packages`;
+  $("pageInfo").textContent = rows.length ? `Showing ${start + 1}–${start + slice.length} of ${rows.length}` : "";
+  $("prev").disabled = state.page === 0; $("next").disabled = state.page >= pages - 1;
+  if (!slice.length) { $("tbody").innerHTML = `<tr><td colspan="${COLS.length}" class="empty">No packages match these filters. Clear a filter to see more.</td></tr>`; return; }
+  $("tbody").innerHTML = slice.map((p, i) => {
+    const block = publishBlock(p, now);
+    const emb = p.embargoDate ? `<div class="emb">${fmtDT(p.embargoDate)}${p.embargoDate > now ? `<span class="tag">Embargoed</span>` : `<span class="past">Lifted</span>`}</div>` : `<span class="muted">—</span>`;
+    return `<tr>
+      <td class="num">${start + i + 1}</td>
+      <td class="jt">${esc(p.journalTitle)}<span class="code">${p.journalCode}</span></td>
+      <td class="mono">${p.packageId}</td>
+      <td class="pn">${esc(p.packageName)}</td>
+      <td><span class="chip ${p.type.toLowerCase()}">${p.type}</span></td>
+      <td class="mono muted">${p.submissionKey}</td>
+      <td>${p.uploadedBy}</td>
+      <td>${fmtDT(p.uploadedAt)}</td>
+      <td>${YN(p.autoPublish)}</td>
+      <td>${YN(p.published)}</td>
+      <td>${YN(p.loaded, true)}</td>
+      <td><button class="btn sm" data-act="preview" data-id="${p.packageId}" type="button">Preview</button></td>
+      <td><button class="btn sm primary" data-act="publish" data-id="${p.packageId}" type="button" ${block ? `disabled title="${esc(block)}"` : `title="Publish all ${p.articles.length} articles"`}>Publish</button></td>
+      <td>${emb}</td>
+      <td><button class="btn sm danger" data-act="unpublish" data-id="${p.packageId}" type="button" ${p.published ? "" : `disabled title="Not published"`}>Unpublish ${p.type}</button></td>
+    </tr>`;
+  }).join("");
+}
+function renderAll() {
+  const dim = dimFiltered();
+  renderKPIs(dim); renderCharts(dim); renderHead(); renderTable();
+  $("asof").textContent = "Updated " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ---------------------------------------------------------------------------
+// Pop-ups
+// ---------------------------------------------------------------------------
+let lastFocus = null, onDismiss = null;
+function openModal(html, small) {
+  if (!$("modalRoot").innerHTML) lastFocus = document.activeElement;
+  onDismiss = null;
+  $("modalRoot").innerHTML = `<div class="overlay" data-close><div class="modal${small ? " small" : ""}" role="dialog" aria-modal="true" aria-labelledby="mTitle">${html}</div></div>`;
+  $("modalRoot").querySelector(".modal .close")?.focus();
+}
+function closeModal() { const h = onDismiss; onDismiss = null; $("modalRoot").innerHTML = ""; lastFocus?.focus?.(); h?.(); }
+function confirmBox(title, body, okLabel, danger) {
+  return new Promise((resolve) => {
+    openModal(`<header><h2 id="mTitle">${esc(title)}</h2><button class="close" data-close aria-label="Close" type="button">×</button></header>
+      <div class="body"><p style="margin:0">${body}</p></div>
+      <footer><button class="btn" data-close type="button">Cancel</button><button class="btn ${danger ? "danger" : "primary"}" id="mOk" type="button">${esc(okLabel)}</button></footer>`, true);
+    onDismiss = () => resolve(false);
+    $("mOk").focus();
+    $("mOk").onclick = () => { onDismiss = null; closeModal(); resolve(true); };
+  });
+}
+function preview(p) {
+  const now = Date.now(), block = publishBlock(p, now);
+  const item = (k, v) => `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  openModal(`<header><div><h2 id="mTitle">${esc(p.packageName)}</h2><div class="muted">${esc(p.journalTitle)} · ${p.type}${p.issue ? ` · Volume ${p.volume}, Issue ${p.issue}` : ""}</div></div><button class="close" data-close aria-label="Close" type="button">×</button></header>
+    <div class="body">
+      <dl class="meta">
+        ${item("Package ID", `<span class="mono">${p.packageId}</span>`)}${item("SubmissionKey", `<span class="mono">${p.submissionKey}</span>`)}
+        ${item("Uploaded", `${fmtDT(p.uploadedAt)} by ${p.uploadedBy}`)}${item("Auto publish flag", YN(p.autoPublish))}
+        ${item("Load status", YN(p.loaded, true))}${item("Publish status", `${YN(p.published)}${p.published ? ` <span class="muted">${fmtDT(p.publishedAt)}, ${esc(p.publishedBy)}</span>` : ""}`)}
+        ${item("Embargo date", p.embargoDate ? `${fmtDT(p.embargoDate)} ${p.embargoDate > now ? `<span class="emb"><span class="tag">Embargoed</span></span>` : `<span class="muted">(lifted)</span>`}` : "None")}
+        ${item("Articles", p.articles.length)}
+      </dl>
+      <div class="arts"><table><thead><tr><th>#</th><th>DOI</th><th>Title</th><th>Authors</th><th>Pages</th></tr></thead><tbody>
+        ${p.articles.map((a, i) => `<tr><td class="num">${i + 1}</td><td class="mono">${a.doi}</td><td class="t">${esc(a.title)}</td><td>${esc(a.authors)}</td><td class="mono">${a.pages}</td></tr>`).join("")}
+      </tbody></table></div>
+    </div>
+    <footer>
+      ${block && !p.published ? `<span class="muted" style="margin-right:auto;align-self:center">${esc(block)}</span>` : ""}
+      <button class="btn danger" data-act="unpublish" data-id="${p.packageId}" type="button" ${p.published ? "" : "disabled"}>Unpublish ${p.type}</button>
+      <button class="btn primary" data-act="publish" data-id="${p.packageId}" type="button" ${block ? "disabled" : ""}>Publish ${p.articles.length} articles</button>
+    </footer>`);
+}
+async function doPublish(p) {
+  const ok = await confirmBox("Publish package?", `Publish all <b>${p.articles.length}</b> articles in <span class="mono">${esc(p.packageName)}</span> (${esc(p.journalTitle)})?`, `Publish ${p.articles.length} articles`);
+  if (!ok) return;
+  try { await api.publishPackage(p.packageId, CURRENT_USER); toast(`Published ${p.packageName} (${p.articles.length} articles)`); }
+  catch (e) { toast(`Could not publish ${p.packageName}: ${e.message}.`); }
+  renderAll();
+}
+async function doUnpublish(p) {
+  const ok = await confirmBox(`Unpublish ${p.type}?`, `Unpublish the ${p.type === "ASAP" ? "ASAP" : "issue"} package <span class="mono">${esc(p.packageName)}</span>? Its ${p.articles.length} articles will be taken offline.`, `Unpublish ${p.type}`, true);
+  if (!ok) return;
+  try { await api.unpublishPackage(p.packageId); toast(`Unpublished ${p.packageName}`); }
+  catch (e) { toast(`Could not unpublish ${p.packageName}: ${e.message}.`); }
+  renderAll();
+}
+
+// ---------------------------------------------------------------------------
+// Wiring
+// ---------------------------------------------------------------------------
+document.addEventListener("click", (e) => {
+  const closeEl = e.target.closest("[data-close]");
+  if (closeEl && (e.target === closeEl || closeEl.tagName === "BUTTON")) { closeModal(); return; }
+  const b = e.target.closest("button[data-act]");
+  if (b && !b.disabled) {
+    const p = state.all.find((x) => x.packageId === b.dataset.id);
+    if (b.dataset.act === "preview") preview(p);
+    if (b.dataset.act === "publish") doPublish(p);
+    if (b.dataset.act === "unpublish") doUnpublish(p);
+    return;
+  }
+  const th = e.target.closest("th.sortable");
+  if (th) {
+    const k = th.dataset.key;
+    state.sort = { key: k, dir: state.sort.key === k ? -state.sort.dir : (k === "uploadedAt" || k === "embargoDate" ? -1 : 1) };
+    state.page = 0; renderHead(); renderTable();
+  }
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("modalRoot").innerHTML) closeModal(); });
+FILTER_IDS.forEach((id) => $(id).addEventListener("change", () => { state.page = 0; renderAll(); }));
+$("clearFilters").onclick = () => { FILTER_IDS.forEach((id) => ($(id).value = "")); state.page = 0; renderAll(); };
+$("prev").onclick = () => { state.page--; renderTable(); };
+$("next").onclick = () => { state.page++; renderTable(); };
+$("resetData").onclick = async () => { await api.resetSample(); state.all = await api.listPackages(); renderAll(); toast("Sample data reset"); };
+const redraw = () => renderCharts(dimFiltered());
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", redraw);
+new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+$("fJournal").innerHTML = `<option value="">All journals (${JOURNALS.length})</option>` + JOURNALS.map((j) => `<option value="${j.code}">${j.code} · ${esc(j.title)}</option>`).join("");
+$("fUser").innerHTML += USERS.map((u) => `<option>${u}</option>`).join("");
+(async () => { state.all = await api.listPackages(); renderAll(); })();
+setInterval(() => { if (!$("modalRoot").innerHTML) renderAll(); }, 60000);
+</script>
