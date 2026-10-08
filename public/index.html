@@ -43,7 +43,13 @@ button, input, select { font: inherit; color: inherit; }
 .mast h1 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
 .mast .sub { color: var(--ink-2); margin-top: 2px; }
 .sample { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
-.mast-actions { display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+.mast-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+.auth { display: inline-flex; gap: 8px; align-items: center; }
+.auth .who { color: var(--ink-2); font-weight: 500; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }
+.form { display: grid; gap: 12px; }
+.form .f input { width: 100%; }
+.form .err { color: var(--crit); font-size: 13px; min-height: 1em; margin: 0; }
 
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
 .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 14px 18px; display: grid; gap: 2px; position: relative; overflow: hidden; }
@@ -131,7 +137,7 @@ td.pn { font-family: var(--font-mono); font-size: 12.5px; }
       <h1>Zipline Content Dashboard <span class="sample">Sample data</span></h1>
       <div class="sub">Auto publish, embargo and load status for ACS journal packages</div>
     </div>
-    <div class="mast-actions"><span id="asof"></span><button class="btn sm" id="resetData" type="button">Reset sample data</button></div>
+    <div class="mast-actions"><span id="asof"></span><button class="btn sm" id="resetData" type="button">Reset sample data</button><span class="auth" id="auth"><button class="btn sm primary" id="loginBtn" type="button">Login</button></span></div>
   </header>
 
   <section class="kpis" id="kpis" aria-label="Today"></section>
@@ -588,4 +594,43 @@ $("fJournal").innerHTML = `<option value="">All journals (${JOURNALS.length})</o
 $("fUser").innerHTML += USERS.map((u) => `<option>${u}</option>`).join("");
 (async () => { state.all = await api.listPackages(); renderAll(); })();
 setInterval(() => { if (!$("modalRoot").innerHTML) renderAll(); }, 60000);
+// ---------------------------------------------------------------------------
+// Login (served by server.js; the Analytics page needs a logged-in session)
+// ---------------------------------------------------------------------------
+function renderAuth(s) {
+  $("auth").innerHTML = s.loggedIn
+    ? `<span class="who">Signed in as ${esc(s.user)}</span><a class="btn sm" href="/analytics">Analytics</a><button class="btn sm" id="logoutBtn" type="button">Log out</button>`
+    : `<button class="btn sm primary" id="loginBtn" type="button">Login</button>`;
+}
+async function refreshAuth() {
+  try { const r = await fetch("/api/session"); if (r.ok) { const s = await r.json(); renderAuth(s); return s; } } catch {}
+  return { loggedIn: false };
+}
+function openLogin(next) {
+  openModal(`<header><h2 id="mTitle">Login</h2><button class="close" data-close aria-label="Close" type="button">×</button></header>
+    <form class="form" id="loginForm"><div class="body">
+      <div class="f"><label for="lUser">Username</label><input id="lUser" name="username" autocomplete="username" required></div>
+      <div class="f"><label for="lPass">Password</label><input id="lPass" name="password" type="password" autocomplete="current-password" required></div>
+      <p class="err" id="lErr" role="alert"></p>
+    </div><footer><button class="btn" data-close type="button">Cancel</button><button class="btn primary" type="submit">Login</button></footer></form>`, true);
+  $("lUser").focus();
+  $("loginForm").onsubmit = async (e) => {
+    e.preventDefault();
+    $("lErr").textContent = "";
+    try {
+      const r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: $("lUser").value, password: $("lPass").value }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { $("lErr").textContent = j.error || "Login failed"; return; }
+      closeModal(); renderAuth(j); toast(`Signed in as ${j.user}`);
+      if (next === "analytics") location.href = "/analytics";
+    } catch { $("lErr").textContent = "Login is only available when the dashboard runs on its server"; }
+  };
+}
+document.addEventListener("click", async (e) => {
+  if (e.target.closest("#loginBtn")) openLogin();
+  if (e.target.closest("#logoutBtn")) { await fetch("/api/logout", { method: "POST" }).catch(() => {}); renderAuth({ loggedIn: false }); toast("Signed out"); }
+});
+refreshAuth().then((s) => {
+  if (new URLSearchParams(location.search).get("login") === "analytics" && !s.loggedIn) openLogin("analytics");
+});
 </script>

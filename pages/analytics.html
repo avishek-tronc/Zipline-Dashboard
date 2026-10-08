@@ -1,0 +1,205 @@
+<title>Dashboard Analytics</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Analytics: masthead > KPI strip > daily views chart + countries > IP table > recent views. Same tokens as the dashboard. */
+:root {
+  --bg: #f4f5f3; --surface: #ffffff; --surface-2: #f8f9f7; --ink: #151918; --ink-2: #4c5350; --muted: #767d79;
+  --line: #e1e4df; --line-strong: #cdd2cc; --accent: #0e5c55; --accent-ink: #ffffff;
+  --good: #0a7d0a; --good-soft: #e5f3e3; --warn: #8a5a00; --warn-soft: #fbf0d6; --crit: #b42f2f; --crit-soft: #fbe7e6;
+  --embargo: #4a3aa7; --embargo-soft: #ecebf8;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s7: #4a3aa7;
+  --grid: #eceee9; --shadow: 0 1px 2px rgba(20,30,25,.06), 0 8px 24px rgba(20,30,25,.08);
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111413; --surface: #191d1c; --surface-2: #1f2422; --ink: #edf0ee; --ink-2: #b6bdb9; --muted: #8b928e;
+  --line: #2a302e; --line-strong: #3a413e; --accent: #5cc0b3; --accent-ink: #0b1a18;
+  --good: #5cc95c; --good-soft: #17301a; --warn: #f0b84a; --warn-soft: #362b14; --crit: #f07a7a; --crit-soft: #3a1c1c;
+  --embargo: #a69cf0; --embargo-soft: #26223f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s7: #9085e9;
+  --grid: #252a28; --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111413; --surface: #191d1c; --surface-2: #1f2422; --ink: #edf0ee; --ink-2: #b6bdb9; --muted: #8b928e;
+  --line: #2a302e; --line-strong: #3a413e; --accent: #5cc0b3; --accent-ink: #0b1a18;
+  --good: #5cc95c; --good-soft: #17301a; --warn: #f0b84a; --warn-soft: #362b14; --crit: #f07a7a; --crit-soft: #3a1c1c;
+  --embargo: #a69cf0; --embargo-soft: #26223f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s7: #9085e9;
+  --grid: #252a28; --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font-sans); }
+.wrap { max-width: 1440px; margin: 0 auto; padding-inline: 20px; padding-block: 20px 48px; display: grid; gap: 20px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; }
+.muted { color: var(--muted); }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.mast { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+.mast h1 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+.mast .sub { color: var(--ink-2); margin-top: 2px; }
+.sample { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+.mast-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: 12px; }
+.auth { display: inline-flex; gap: 8px; align-items: center; }
+.auth .who { color: var(--ink-2); font-weight: 500; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }
+.form { display: grid; gap: 12px; }
+.form .f input { width: 100%; }
+.form .err { color: var(--crit); font-size: 13px; min-height: 1em; margin: 0; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 14px 18px; display: grid; gap: 2px; position: relative; overflow: hidden; }
+.kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--k, var(--line-strong)); }
+.kpi .lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.kpi .val { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.kpi .note { font-size: 12px; color: var(--muted); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 12px; min-width: 0; }
+.card h3 { font-size: 14px; font-weight: 600; }
+.card .cap { font-size: 12px; color: var(--muted); margin: 2px 0 8px; }
+.chartbox { position: relative; height: 220px; }
+
+.btn { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }
+.form { display: grid; gap: 12px; }
+.form .f input { width: 100%; }
+.form .err { color: var(--crit); font-size: 13px; min-height: 1em; margin: 0; }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 14px 18px; display: grid; gap: 2px; position: relative; overflow: hidden; }
+.kpi::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--k, var(--line-strong)); }
+.kpi .lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.kpi .val { font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.kpi .note { font-size: 12px; color: var(--muted); }
+
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 12px; min-width: 0; }
+.card h3 { font-size: 14px; font-weight: 600; }
+.card .cap { font-size: 12px; color: var(--muted); margin: 2px 0 8px; }
+.chartbox { position: relative; height: 220px; }
+
+.filters { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.f { display: grid; gap: 4px; min-width: 0; }
+.f label, .f .lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.f select, .f input { height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); }
+.f.journal select { width: min(340px, 80vw); }
+.daterange { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.btn { height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; font-weight: 500; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--surface-2); border-color: var(--ink-2); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.1); background: var(--accent); border-color: var(--accent); }
+.tablecard { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.tablehead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.tablehead h2 { font-size: 15px; font-weight: 600; }
+.tablewrap { overflow: auto; max-height: 72vh; }
+table { border-collapse: separate; border-spacing: 0; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; vertical-align: middle; }
+thead th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-2); }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+th .arr { font-size: 10px; margin-left: 3px; color: var(--accent); }
+tbody tr:hover td { background: var(--surface-2); }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 13px; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }
+td.num, th.num { text-align: right; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 900px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.tablewrap.short { max-height: 420px; }
+.ua { max-width: 360px; overflow: hidden; text-overflow: ellipsis; color: var(--muted); font-size: 12px; }
+.note { font-size: 12px; color: var(--muted); }
+.empty { padding: 32px 16px; text-align: center; color: var(--muted); }
+@media (max-width: 600px) { .wrap { padding-inline: 16px; } .kpi .val { font-size: 26px; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <div>
+      <h1>Analytics</h1>
+      <div class="sub">Views, visitors, IP addresses and geography for the Zipline Content Dashboard</div>
+    </div>
+    <div class="mast-actions"><span id="asof"></span><a class="btn sm" href="/">Back to dashboard</a><button class="btn sm" id="refresh" type="button">Refresh</button><button class="btn sm" id="logout" type="button">Log out</button></div>
+  </header>
+
+  <section class="kpis" id="kpis" aria-label="Totals"></section>
+
+  <section class="grid2">
+    <div class="card"><h3>Views, last 14 days</h3><div class="cap">Dashboard page loads and distinct visitors per day (UTC)</div><div class="chartbox"><canvas id="cDaily" aria-label="Views per day for the last 14 days"></canvas></div></div>
+    <div class="tablecard">
+      <div class="tablehead"><h2>Geography</h2><span class="muted" id="geoCount"></span></div>
+      <div class="tablewrap short"><table><thead><tr><th>Country</th><th class="num">IP addresses</th><th class="num">Views</th></tr></thead><tbody id="geo"></tbody></table></div>
+    </div>
+  </section>
+
+  <section class="tablecard">
+    <div class="tablehead"><h2>Visitors by IP address</h2><span class="muted" id="ipCount"></span></div>
+    <div class="tablewrap short"><table><thead><tr><th>IP address</th><th>Country</th><th>Region</th><th>City</th><th class="num">Views</th><th>First seen</th><th>Last seen</th></tr></thead><tbody id="ips"></tbody></table></div>
+  </section>
+
+  <section class="tablecard">
+    <div class="tablehead"><h2>Recent views</h2><span class="muted">Latest 100</span></div>
+    <div class="tablewrap short"><table><thead><tr><th>Time</th><th>IP address</th><th>Location</th><th>Visitor</th><th>Browser</th></tr></thead><tbody id="recent"></tbody></table></div>
+  </section>
+  <p class="note">A view is one load of the dashboard page. Distinct visitors are counted by a browser cookie, so the same person on two browsers counts twice. Geography is looked up from the IP address and is approximate.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const fmtT = (t) => new Date(t).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+const place = (g) => g ? [g.city, g.region, g.country].filter(Boolean).join(", ") : "Unknown";
+const FONT = "IBM Plex Sans, system-ui, sans-serif";
+let chart = null, data = null;
+
+function renderChart() {
+  if (!window.Chart || !data) return;
+  const ink2 = css("--ink-2"), grid = css("--grid");
+  const axis = (isValue) => ({ beginAtZero: true, grid: { color: isValue ? grid : "transparent", drawTicks: false }, border: { display: false },
+    ticks: { color: ink2, font: { family: FONT, size: 11 }, padding: 6, precision: 0, ...(isValue ? { maxTicksLimit: 5 } : { autoSkip: true, maxRotation: 0 }) } });
+  const labels = data.daily.map((d, i) => i === data.daily.length - 1 ? "Today" : new Date(d.day + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }));
+  const bar = (label, values, color) => ({ label, data: values, backgroundColor: color, borderColor: css("--surface"), borderWidth: { top: 2 }, borderRadius: 3, borderSkipped: "start", maxBarThickness: 22 });
+  chart?.destroy();
+  chart = new Chart($("cDaily"), { type: "bar", data: { labels, datasets: [bar("Views", data.daily.map((d) => d.views), css("--s1")), bar("Distinct visitors", data.daily.map((d) => d.visitors), css("--s3"))] },
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 250 }, interaction: { mode: "index", intersect: false },
+      plugins: { legend: { position: "top", align: "end", labels: { color: ink2, boxWidth: 10, boxHeight: 10, useBorderRadius: true, borderRadius: 2, font: { family: FONT, size: 12 } } },
+        tooltip: { backgroundColor: css("--ink"), titleColor: css("--bg"), bodyColor: css("--bg"), padding: 10, cornerRadius: 6, boxPadding: 4 } },
+      scales: { x: axis(false), y: axis(true) } } });
+}
+
+function render() {
+  const t = data.totals;
+  const tiles = [
+    ["Total views", t.views, `${t.viewsToday} today`, "--s1"],
+    ["Distinct visitors", t.distinctVisitors, `${t.visitorsToday} today`, "--s3"],
+    ["Unique IP addresses", t.uniqueIps, "All time", "--s2"],
+    ["Countries", t.countries, "From IP geography", "--s7"],
+  ];
+  $("kpis").innerHTML = tiles.map(([l, v, n, c]) => `<div class="kpi" style="--k:var(${c})"><span class="lbl">${l}</span><span class="val">${v.toLocaleString()}</span><span class="note">${n}</span></div>`).join("");
+  const empty = (cols, msg) => `<tr><td colspan="${cols}" class="empty">${msg}</td></tr>`;
+  $("geoCount").textContent = `${data.byCountry.length} ${data.byCountry.length === 1 ? "location" : "locations"}`;
+  $("geo").innerHTML = data.byCountry.length ? data.byCountry.map((c) => `<tr><td>${esc(c.country)}${c.countryCode ? ` <span class="muted mono">${esc(c.countryCode)}</span>` : ""}</td><td class="num">${c.ips}</td><td class="num">${c.views}</td></tr>`).join("") : empty(3, "No views yet");
+  $("ipCount").textContent = `${data.byIp.length} ${data.byIp.length === 1 ? "address" : "addresses"}`;
+  $("ips").innerHTML = data.byIp.length ? data.byIp.map((r) => `<tr><td class="mono">${esc(r.ip)}</td><td>${esc(r.country)}</td><td>${esc(r.region)}</td><td>${esc(r.city)}</td><td class="num">${r.views}</td><td>${fmtT(r.firstSeen)}</td><td>${fmtT(r.lastSeen)}</td></tr>`).join("") : empty(7, "No views yet");
+  $("recent").innerHTML = data.recent.length ? data.recent.map((v) => `<tr><td>${fmtT(v.ts)}</td><td class="mono">${esc(v.ip)}</td><td>${esc(place(v.geo))}</td><td class="mono">${esc(v.visitorId.slice(0, 8))}</td><td class="ua" title="${esc(v.userAgent)}">${esc(v.userAgent)}</td></tr>`).join("") : empty(5, "No views yet");
+  $("asof").textContent = "Updated " + new Date(data.generatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  renderChart();
+}
+
+async function load() {
+  const r = await fetch("/api/analytics");
+  if (r.status === 401) { location.href = "/?login=analytics"; return; }
+  data = await r.json();
+  render();
+}
+$("refresh").onclick = load;
+$("logout").onclick = async () => { await fetch("/api/logout", { method: "POST" }); location.href = "/"; };
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", renderChart);
+load();
+setInterval(load, 60000);
+</script>
