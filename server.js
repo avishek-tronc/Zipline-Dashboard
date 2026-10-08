@@ -4,7 +4,7 @@
 //
 // Also handles admin login (cookie session) and visitor analytics: each load of
 // the dashboard page is recorded with the visitor's IP and geography, and the
-// Analytics page (/analytics) shows them to a logged-in admin.
+// Analytics page (/analytics) shows them. Analytics is public; no login needed.
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
@@ -87,7 +87,6 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { loggedIn: false }, { "Set-Cookie": `zd_session=${cookieAttrs(req)}; Max-Age=0` });
   }
   if (url.pathname === "/api/analytics" && req.method === "GET") {
-    if (!currentUser(req)) return sendJson(res, 401, { error: "Login required" });
     return sendJson(res, 200, analytics.summary());
   }
   return sendJson(res, 404, { error: "Not found" });
@@ -103,7 +102,6 @@ http
       }
       if (url.pathname.startsWith("/api/")) return await handleApi(req, res, url);
       if (url.pathname === "/analytics") {
-        if (!currentUser(req)) { res.writeHead(302, { Location: "/?login=analytics" }); return res.end(); }
         return sendHtml(res, path.join(PAGES, "analytics.html"));
       }
       if (url.pathname === "/" || url.pathname === "/index.html") {

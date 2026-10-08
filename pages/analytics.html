@@ -122,7 +122,7 @@ td.num, th.num { text-align: right; }
       <h1>Analytics</h1>
       <div class="sub">Views, visitors, IP addresses and geography for the Zipline Content Dashboard</div>
     </div>
-    <div class="mast-actions"><span id="asof"></span><a class="btn sm" href="/">Back to dashboard</a><button class="btn sm" id="refresh" type="button">Refresh</button><button class="btn sm" id="logout" type="button">Log out</button></div>
+    <div class="mast-actions"><span id="asof"></span><a class="btn sm" href="/">Back to dashboard</a><button class="btn sm" id="refresh" type="button">Refresh</button></div>
   </header>
 
   <section class="kpis" id="kpis" aria-label="Totals"></section>
@@ -193,12 +193,10 @@ function render() {
 
 async function load() {
   const r = await fetch("/api/analytics");
-  if (r.status === 401) { location.href = "/?login=analytics"; return; }
   data = await r.json();
   render();
 }
 $("refresh").onclick = load;
-$("logout").onclick = async () => { await fetch("/api/logout", { method: "POST" }); location.href = "/"; };
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", renderChart);
 load();
 setInterval(load, 60000);

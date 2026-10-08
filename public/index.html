@@ -597,10 +597,7 @@ setInterval(() => { if (!$("modalRoot").innerHTML) renderAll(); }, 60000);
 // ---------------------------------------------------------------------------
 // Login (served by server.js; the Analytics page needs a logged-in session)
 // ---------------------------------------------------------------------------
-// The Analytics button always shows; signed out, it asks for login before opening the page.
-let signedIn = false;
 function renderAuth(s) {
-  signedIn = !!s.loggedIn;
   $("auth").innerHTML = `<a class="btn sm" id="analyticsBtn" href="/analytics">Analytics</a>` + (s.loggedIn
     ? `<span class="who">Signed in as ${esc(s.user)}</span><button class="btn sm" id="logoutBtn" type="button">Log out</button>`
     : `<button class="btn sm primary" id="loginBtn" type="button">Login</button>`);
@@ -609,7 +606,7 @@ async function refreshAuth() {
   try { const r = await fetch("/api/session"); if (r.ok) { const s = await r.json(); renderAuth(s); return s; } } catch {}
   return { loggedIn: false };
 }
-function openLogin(next) {
+function openLogin() {
   openModal(`<header><h2 id="mTitle">Login</h2><button class="close" data-close aria-label="Close" type="button">×</button></header>
     <form class="form" id="loginForm"><div class="body">
       <div class="f"><label for="lUser">Username</label><input id="lUser" name="username" autocomplete="username" required></div>
@@ -625,16 +622,12 @@ function openLogin(next) {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { $("lErr").textContent = j.error || "Login failed"; return; }
       closeModal(); renderAuth(j); toast(`Signed in as ${j.user}`);
-      if (next === "analytics") location.href = "/analytics";
     } catch { $("lErr").textContent = "Login is only available when the dashboard runs on its server"; }
   };
 }
 document.addEventListener("click", async (e) => {
   if (e.target.closest("#loginBtn")) openLogin();
-  if (e.target.closest("#analyticsBtn") && !signedIn) { e.preventDefault(); openLogin("analytics"); }
   if (e.target.closest("#logoutBtn")) { await fetch("/api/logout", { method: "POST" }).catch(() => {}); renderAuth({ loggedIn: false }); toast("Signed out"); }
 });
-refreshAuth().then((s) => {
-  if (new URLSearchParams(location.search).get("login") === "analytics" && !s.loggedIn) openLogin("analytics");
-});
+refreshAuth();
 </script>
