@@ -137,7 +137,7 @@ td.pn { font-family: var(--font-mono); font-size: 12.5px; }
       <h1>Zipline Content Dashboard <span class="sample">Sample data</span></h1>
       <div class="sub">Auto publish, embargo and load status for ACS journal packages</div>
     </div>
-    <div class="mast-actions"><span id="asof"></span><button class="btn sm" id="resetData" type="button">Reset sample data</button><span class="auth" id="auth"><button class="btn sm primary" id="loginBtn" type="button">Login</button></span></div>
+    <div class="mast-actions"><span id="asof"></span><button class="btn sm" id="resetData" type="button">Reset sample data</button><span class="auth" id="auth"><a class="btn sm" id="analyticsBtn" href="/analytics">Analytics</a><button class="btn sm primary" id="loginBtn" type="button">Login</button></span></div>
   </header>
 
   <section class="kpis" id="kpis" aria-label="Today"></section>
@@ -597,10 +597,13 @@ setInterval(() => { if (!$("modalRoot").innerHTML) renderAll(); }, 60000);
 // ---------------------------------------------------------------------------
 // Login (served by server.js; the Analytics page needs a logged-in session)
 // ---------------------------------------------------------------------------
+// The Analytics button always shows; signed out, it asks for login before opening the page.
+let signedIn = false;
 function renderAuth(s) {
-  $("auth").innerHTML = s.loggedIn
-    ? `<span class="who">Signed in as ${esc(s.user)}</span><a class="btn sm" href="/analytics">Analytics</a><button class="btn sm" id="logoutBtn" type="button">Log out</button>`
-    : `<button class="btn sm primary" id="loginBtn" type="button">Login</button>`;
+  signedIn = !!s.loggedIn;
+  $("auth").innerHTML = `<a class="btn sm" id="analyticsBtn" href="/analytics">Analytics</a>` + (s.loggedIn
+    ? `<span class="who">Signed in as ${esc(s.user)}</span><button class="btn sm" id="logoutBtn" type="button">Log out</button>`
+    : `<button class="btn sm primary" id="loginBtn" type="button">Login</button>`);
 }
 async function refreshAuth() {
   try { const r = await fetch("/api/session"); if (r.ok) { const s = await r.json(); renderAuth(s); return s; } } catch {}
@@ -628,6 +631,7 @@ function openLogin(next) {
 }
 document.addEventListener("click", async (e) => {
   if (e.target.closest("#loginBtn")) openLogin();
+  if (e.target.closest("#analyticsBtn") && !signedIn) { e.preventDefault(); openLogin("analytics"); }
   if (e.target.closest("#logoutBtn")) { await fetch("/api/logout", { method: "POST" }).catch(() => {}); renderAuth({ loggedIn: false }); toast("Signed out"); }
 });
 refreshAuth().then((s) => {
