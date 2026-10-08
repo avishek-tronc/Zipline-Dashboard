@@ -1,4 +1,4 @@
-# Zipline Content Dashboard
+# Content Delivery Dashboard
 
 Dashboard for ACS journal packages set to auto publish or under embargo. It currently runs on sample data.
 

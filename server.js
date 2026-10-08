@@ -129,4 +129,4 @@ http
       res.end("Server error");
     }
   })
-  .listen(PORT, "0.0.0.0", () => console.log(`Zipline Content Dashboard on http://localhost:${PORT}`));
+  .listen(PORT, "0.0.0.0", () => console.log(`Content Delivery Dashboard on http://localhost:${PORT}`));
